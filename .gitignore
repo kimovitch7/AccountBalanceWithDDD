@@ -64,6 +64,14 @@ artifacts/
 # StyleCop
 StyleCopReport.xml
 
+# .NET Core build folders
+bin/
+obj/
+
+# Common node modules locations
+/node_modules
+/wwwroot/node_modules
+
 # Files built by Visual Studio
 *_i.c
 *_p.c
