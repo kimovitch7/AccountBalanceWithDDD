@@ -24,6 +24,7 @@ namespace Presentation.API
             {
                 var endpointConfiguration = new EndpointConfiguration("AccountBalance.Presentation.API");
                 endpointConfiguration.MakeInstanceUniquelyAddressable("1");
+                //endpointConfiguration.EnableCallbacks();
                 endpointConfiguration.UseTransport<LearningTransport>();
                 return endpointConfiguration;
             })

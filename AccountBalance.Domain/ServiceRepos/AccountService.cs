@@ -18,7 +18,11 @@ namespace AccountBalance.Domain.ServiceRepos
         private IMessageSession _messageSession;
         private readonly IEnumerable<Account> _accounts;
 
-        public AccountService(IMessageSession messageSession) => _messageSession = messageSession;
+        public AccountService(IMessageSession messageSession)
+        {
+            _messageSession = messageSession;
+            _accounts = new List<Account>();
+        }
 
         public Account GetById(string id)
         {
@@ -49,6 +53,9 @@ namespace AccountBalance.Domain.ServiceRepos
             {
                 var account = GetById(message.AccountId);
                 account.Withdraw(message.Amount);
+
+                _messageSession.Send(message).ConfigureAwait(false);
+
                 Task reply = context.Reply("RequestWithdrawalCommand");
                 return reply;
             }

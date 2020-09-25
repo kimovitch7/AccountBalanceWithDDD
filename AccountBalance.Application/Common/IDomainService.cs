@@ -1,4 +1,5 @@
 ﻿using NServiceBus;
+using System.Collections.Generic;
 
 namespace AccountBalance.Application.Common
 {

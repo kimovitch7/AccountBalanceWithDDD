@@ -7,7 +7,6 @@ namespace AccountBalance.Application.Common
 {
     public class AggregateRoot : Entity
     {
-        //private
         public IServiceRepository<AggregateRoot> _serviceRepo;
         public void Append(IMessage message)
         {
