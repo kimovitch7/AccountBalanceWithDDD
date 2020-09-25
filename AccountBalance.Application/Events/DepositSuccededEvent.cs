@@ -7,13 +7,11 @@ namespace AccountBalance.Application.Events
 {
     public class DepositSuccededEvent : Event
     {
-        public string OperationId { get; }
         public string AccountId { get; }    
         public decimal Amount { get; } 
 
-        public DepositSuccededEvent(string operationId, string accountId, decimal amount, EventReasons reason): base(reason)
+        public DepositSuccededEvent(string accountId, decimal amount, EventReasons reason): base(reason)
         {
-            OperationId = operationId;
             AccountId = accountId;
             Amount = amount;
         }

@@ -7,7 +7,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NServiceBus;
-using NServiceBus.Unicast.Messages;
 
 
 namespace Presentation.API
@@ -21,14 +20,13 @@ namespace Presentation.API
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>
              Host.CreateDefaultBuilder(args)
-            .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>())
             .UseNServiceBus(Context =>
             {
                 var endpointConfiguration = new EndpointConfiguration("AccountBalance.Presentation.API");
                 endpointConfiguration.MakeInstanceUniquelyAddressable("1");
-                endpointConfiguration.EnableCallbacks();
                 endpointConfiguration.UseTransport<LearningTransport>();
                 return endpointConfiguration;
-            });
+            })
+            .ConfigureWebHostDefaults(webBuilder => webBuilder.UseStartup<Startup>());
     }
 }

@@ -5,8 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="NServiceBus" Version="7.4.3" />
-    <PackageReference Include="NServiceBus.Host" Version="8.0.0" />
+    <PackageReference Include="JKang.EventBus.Core" Version="1.1.0" />
   </ItemGroup>
 
   <ItemGroup>

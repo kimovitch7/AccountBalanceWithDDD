@@ -8,6 +8,7 @@ namespace AccountBalance.Application.Common
     {
         public enum EventReasons { NONE, AMOUNT_INVALID, EXCEEDED_OVERDRAFT_LIMIT, ACCOUNT_BLOCKED }
         public EventReasons Reason { get; }
+        public Event() { }
         public Event(EventReasons reason) => Reason = reason;
     }
 }

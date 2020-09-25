@@ -1,84 +1,90 @@
-﻿using AccountBalance.Domain.BaseClasses;
-using System;
+﻿using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
 using AccountBalance.Application.Events;
 using AccountBalance.Application.Commands;
+using AccountBalance.Domain.ServiceRepos;
 using static AccountBalance.Application.Common.Event;
+using AccountBalance.Application.Common;
 
 namespace AccountBalance.Domain.Aggregates.AccountAggregate
 {
-    class Account: Entity, IAggregateRoot
+    public class Account : AggregateRoot
     {
-        private List<Operation> _operations;
-        public IEnumerable<Operation> Operations => _operations.AsReadOnly();
-        
-        public string AccountName { get; private set; }
-        public decimal Funds { get; private set; }
-        public AccountState State { get; private set; }
-        public decimal WireTransferLimit { get; private set; }
-        public decimal OverDraftLimit { get; private set; }
+        //private List<Operation> _operations;
+        //public IEnumerable<Operation> Operations => _operations.AsReadOnly();
 
-        public Account(string acctName, decimal fund, AccountState state, decimal wireTransferLimit, decimal overDraftLimit)
+        private string _accountName;
+        private decimal _funds;
+        private AccountState _state;
+        private decimal _wireTransferLimit;
+        private decimal _overDraftLimit;
+
+        public Account(string accountName, decimal wireTransferLimit, decimal overDraftLimit)
         {
-            AccountName = !string.IsNullOrWhiteSpace(acctName) ? acctName : throw new ArgumentNullException(nameof(acctName));
-            Funds = (fund > 0) ? fund : throw new Exception("account can't be created with a negative fund");
-            State = state;
-            WireTransferLimit = (wireTransferLimit >= 0) ? wireTransferLimit : throw new Exception("Wire transfer limit can't be a negative value");
-            OverDraftLimit = (overDraftLimit >= 0) ? overDraftLimit : throw new Exception("Overdraft limit can't be a negative value");
-            _operations = new List<Operation>();
+            _state = AccountState.UNBLOCKED;
+            _accountName = !string.IsNullOrWhiteSpace(accountName) ? accountName : throw new ArgumentNullException(nameof(accountName));
+            _wireTransferLimit = (wireTransferLimit >= 0) ? wireTransferLimit : throw new Exception("Wire transfer limit can't be a negative value");
+            _overDraftLimit = (overDraftLimit >= 0) ? overDraftLimit : throw new Exception("Overdraft limit can't be a negative value");
+        }
+
+        private void Apply(DepositSuccededEvent evt)
+        {
+            _funds += evt.Amount;
+        }
+
+        private void Apply(WithdrawSuccededEvent evt)
+        {
+            _funds -= evt.Amount;
+        }
+
+        private void Apply(UnblockAccountCommand evt)
+        {
+            _state = AccountState.UNBLOCKED;
+        }
+        private void Apply(BlockAccountCommand evt)
+        {
+            _state = AccountState.BLOCKED;
+        }
+
+        private void BlockAccount()
+        {
+            var evt = new BlockAccountCommand(guid.ToString());
+            Append(evt);
+            Apply(evt);
         }
 
         public void Deposit(decimal amount)
         {
-            var operation = new Operation(guid.ToString(), amount, OperationDirection.DEPOSIT, DateTime.Now);
-
             if (amount < 0)
             {
-                SendDomainMessage(new WithdrawFailedEvent(guid.ToString(), EventReasons.AMOUNT_INVALID));
-                return;
+                throw new InvalidOperationException("Invalid amount value");
             }
 
-            Funds += amount;
-            _operations.Add(operation);
+            var depositSucceded = new DepositSuccededEvent(guid.ToString(), amount, EventReasons.NONE);
+            Append(depositSucceded);
+            Apply(depositSucceded);
 
-            SendDomainMessage(new DepositSuccededEvent(operation.guid.ToString(), guid.ToString(), amount, EventReasons.NONE));
-
-            if (State.Equals(AccountState.BLOCKED))
+            if (_state.Equals(AccountState.BLOCKED))
             {
-                State = AccountState.UNBLOCKED;
-                SendDomainMessage(new BlockAccountCommand(guid.ToString()));
+                var unblockAccountEvent = new UnblockAccountCommand(guid.ToString());
+                Append(unblockAccountEvent);
+                Apply(unblockAccountEvent);
             }           
         }
 
         public void Withdraw(decimal amount)
         {
-            var operation = new Operation(guid.ToString(), amount, OperationDirection.WITHDRAW, DateTime.Now);
+            if (_state.Equals(AccountState.BLOCKED)) throw new Exception(" This Account is blocked, you cannot withdraw funds");
 
-            if (State.Equals(AccountState.BLOCKED))
-            {
-                SendDomainMessage(new WithdrawFailedEvent(operation.guid.ToString(), EventReasons.ACCOUNT_BLOCKED));
-                return;
-            }
+            if (amount < 0) throw new InvalidOperationException("negative amount");
 
-            if (amount < 0)
-            {
-                SendDomainMessage(new WithdrawFailedEvent(operation.guid.ToString(), EventReasons.AMOUNT_INVALID));
-                return;
-            }
-            
-            if ((Funds - amount) <= -OverDraftLimit)
-            {
-                SendDomainMessage(new WithdrawFailedEvent(operation.guid.ToString(), EventReasons.EXCEEDED_OVERDRAFT_LIMIT));
-                //SendDomainMessage(new BlockAccountCommand(guid.ToString())); ||| should be in the event handler of previous event
-                return;
-            }
+            if ((_funds - amount) <= -_overDraftLimit) BlockAccount();
 
-            Funds -= amount;
-
-            _operations.Add(operation);
-            SendDomainMessage(new WithdrawSuccededEvent(operation.guid.ToString(), guid.ToString(), amount, EventReasons.NONE));
+            var WithdrawSuccededEvt = new WithdrawSuccededEvent(guid.ToString(), amount, EventReasons.NONE);
+            Append(WithdrawSuccededEvt);
+            Apply(WithdrawSuccededEvt);
         }
     }
 }
